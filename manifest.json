@@ -1,0 +1,11 @@
+{
+	"id": "assistant-plugin",
+	"name": "Assistant",
+	"version": "0.0.1",
+	"minAppVersion": "0.15.0",
+	"description": "Assistant.",
+	"author": "giosullutrone",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
