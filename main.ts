@@ -19,18 +19,34 @@ interface CanvasChatPluginSettings {
     systemPrompt: string;         // The system prompt for the assistant
     maxTokens: number;            // Maximum number of tokens for the model
     apiToken: string;             // API token for authentication
+
+    // Model parameters
+    temperature: number;          // Temperature for sampling
+    top_k: number;                // Top-k sampling
+    top_p: number;                // Top-p (nucleus) sampling
+    repeat_penalty: number;       // Repeat penalty
+    presence_penalty: number;     // Presence penalty
+    frequency_penalty: number;    // Frequency penalty
 }
 
-// Default settings
+/** Default settings */
 const DEFAULT_SETTINGS: CanvasChatPluginSettings = {
-    vllmApiUrl: 'http://localhost:8000',
+    vllmApiUrl: 'http://localhost:11434',
     userHighlightColor: '#FF5582A6',
     assistantHighlightColor: '#82FF55A6',
     debugMode: false,
-    model: 'llama3.1:8b-instruct-fp16',
+    model: 'llama3.2',
     systemPrompt: 'You are a helpful assistant.',
     maxTokens: 2048,
     apiToken: '',
+
+    // Default model parameters
+    temperature: 0.8,
+    top_k: 20,
+    top_p: 0.9,
+    repeat_penalty: 1.2,
+    presence_penalty: 1.5,
+    frequency_penalty: 1.0,
 };
 
 /*######################################################
@@ -73,9 +89,9 @@ class CanvasChatPluginSettingTab extends PluginSettingTab {
         // Model Setting
         new Setting(containerEl)
             .setName('Model')
-            .setDesc('Specify the model to use for the vLLM API (e.g., llama3.1:8b-instruct-fp16)')
+            .setDesc('Specify the model to use for the vLLM API (e.g., llama3.2)')
             .addText(text => text
-                .setPlaceholder('llama3.1:8b-instruct-fp16')
+                .setPlaceholder('llama3.2')
                 .setValue(this.plugin.settings.model)
                 .onChange(async (value) => {
                     this.plugin.settings.model = value;
@@ -166,6 +182,129 @@ class CanvasChatPluginSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 })
             );
+
+        // Add a heading for Model Parameters
+        containerEl.createEl('h3', { text: 'Model Parameters' });
+
+        // Temperature Setting
+        new Setting(containerEl)
+            .setName('Temperature')
+            .setDesc('Set the temperature for sampling (e.g., 0.8)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.step = '0.1';
+                text.setPlaceholder('0.8')
+                    .setValue(this.plugin.settings.temperature.toString())
+                    .onChange(async (value) => {
+                        const num = parseFloat(value);
+                        if (!isNaN(num) && num >= 0) {
+                            this.plugin.settings.temperature = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid non-negative number for temperature.');
+                        }
+                    });
+            });
+
+        // Top K Setting
+        new Setting(containerEl)
+            .setName('Top K')
+            .setDesc('Set the top-k value for sampling (e.g., 20)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.min = '0';
+                text.setPlaceholder('20')
+                    .setValue(this.plugin.settings.top_k.toString())
+                    .onChange(async (value) => {
+                        const num = parseInt(value);
+                        if (!isNaN(num) && num >= 0) {
+                            this.plugin.settings.top_k = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid non-negative integer for top_k.');
+                        }
+                    });
+            });
+
+        // Top P Setting
+        new Setting(containerEl)
+            .setName('Top P')
+            .setDesc('Set the top-p (nucleus) value for sampling (e.g., 0.9)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.step = '0.1';
+                text.setPlaceholder('0.9')
+                    .setValue(this.plugin.settings.top_p.toString())
+                    .onChange(async (value) => {
+                        const num = parseFloat(value);
+                        if (!isNaN(num) && num >= 0 && num <= 1) {
+                            this.plugin.settings.top_p = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid number between 0 and 1 for top_p.');
+                        }
+                    });
+            });
+
+        // Repeat Penalty Setting
+        new Setting(containerEl)
+            .setName('Repeat Penalty')
+            .setDesc('Set the repeat penalty (e.g., 1.2)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.step = '0.1';
+                text.setPlaceholder('1.2')
+                    .setValue(this.plugin.settings.repeat_penalty.toString())
+                    .onChange(async (value) => {
+                        const num = parseFloat(value);
+                        if (!isNaN(num) && num >= 0) {
+                            this.plugin.settings.repeat_penalty = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid non-negative number for repeat penalty.');
+                        }
+                    });
+            });
+
+        // Presence Penalty Setting
+        new Setting(containerEl)
+            .setName('Presence Penalty')
+            .setDesc('Set the presence penalty (e.g., 1.5)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.step = '0.1';
+                text.setPlaceholder('1.5')
+                    .setValue(this.plugin.settings.presence_penalty.toString())
+                    .onChange(async (value) => {
+                        const num = parseFloat(value);
+                        if (!isNaN(num)) {
+                            this.plugin.settings.presence_penalty = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid number for presence penalty.');
+                        }
+                    });
+            });
+
+        // Frequency Penalty Setting
+        new Setting(containerEl)
+            .setName('Frequency Penalty')
+            .setDesc('Set the frequency penalty (e.g., 1.0)')
+            .addText(text => {
+                text.inputEl.type = 'number';
+                text.inputEl.step = '0.1';
+                text.setPlaceholder('1.0')
+                    .setValue(this.plugin.settings.frequency_penalty.toString())
+                    .onChange(async (value) => {
+                        const num = parseFloat(value);
+                        if (!isNaN(num)) {
+                            this.plugin.settings.frequency_penalty = num;
+                            await this.plugin.saveSettings();
+                        } else {
+                            new Notice('Please enter a valid number for frequency penalty.');
+                        }
+                    });
+            });
     }
 }
 
@@ -306,23 +445,23 @@ export default class CanvasChatPlugin extends Plugin {
     }
 
     /**
-     * Check if a node is an Assistant placeholder.
-     * @param content - The content of the node.
-     * @returns True if the node is an Assistant placeholder, false otherwise.
-     */
-    isAssistantPlaceholder(content: string): boolean {
-        const cleanContent = content.replace(/<mark[^>]*>/g, '').replace(/<\/mark>/g, '').trim();
-        return cleanContent === 'Assistant:';
-    }
-
-    /**
      * Check if a node is a User node.
      * @param content - The content of the node.
      * @returns True if the node is a User node, false otherwise.
      */
     isUserNode(content: string): boolean {
-        const cleanContent = content.replace(/<mark[^>]*>/g, '').replace(/<\/mark>/g, '').trim();
+        const cleanContent = this.cleanContent(content);
         return cleanContent.startsWith('User:');
+    }
+
+    /**
+     * Check if a node is an Assistant placeholder.
+     * @param content - The content of the node.
+     * @returns True if the node is an Assistant placeholder, false otherwise.
+     */
+    isAssistantPlaceholder(content: string): boolean {
+        const cleanContent = this.cleanContent(content);
+        return cleanContent === 'Assistant:';
     }
 
     /**
@@ -333,16 +472,19 @@ export default class CanvasChatPlugin extends Plugin {
     async appendToNode(node: any, text: string) {
         try {
             const canvas = node.canvas;
-
+    
+            // Clean any existing marks from the response
+            let cleanText = this.cleanContent(text);
+    
             // Create a new text node positioned below the original node
             const newNode = canvas.createTextNode({
                 pos: { x: node.x, y: node.y + node.height + 100 },
-                text: `<mark style="background: ${this.settings.assistantHighlightColor};">Assistant:</mark> ${text}`,
+                text: `<mark style="background: ${this.settings.assistantHighlightColor};">Assistant:</mark> ${cleanText}`,
                 save: true,
                 focus: false,
                 size: { height: node.height, width: node.width },
             });
-
+    
             // Create an edge connecting the original node to the new node
             const edge = {
                 id: 'edge' + Date.now(),
@@ -351,12 +493,12 @@ export default class CanvasChatPlugin extends Plugin {
                 toNode: newNode.id,
                 toSide: "top"
             };
-
+    
             // Add the new edge to the canvas data
             const data = canvas.getData();
             data.edges.push(edge);
             canvas.setData(data);
-
+    
             if (this.settings.debugMode) {
                 console.log('Appended assistant response as a new node:', newNode);
             }
@@ -413,7 +555,17 @@ export default class CanvasChatPlugin extends Plugin {
         const requestBody: any = {
             model: this.settings.model,
             messages: messages,
-            max_tokens: this.settings.maxTokens,
+            options: {
+                num_ctx: this.settings.maxTokens,
+                num_predict: -1,
+                seed: 42,
+                temperature: this.settings.temperature,
+                top_k: this.settings.top_k,
+                top_p: this.settings.top_p,
+                repeat_penalty: this.settings.repeat_penalty,
+                presence_penalty: this.settings.presence_penalty,
+                frequency_penalty: this.settings.frequency_penalty,
+            },
         };
 
         if (this.settings.debugMode) {
@@ -494,14 +646,22 @@ export default class CanvasChatPlugin extends Plugin {
             new Notice("Error reading user's input, make sure to select a textual node.");
             throw new Error("Error reading user's input, make sure to select a textual node.");
         }
-
-        // Add "User:" prefix with highlight if not present
-        const userMarkStart = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> `;
-        if (!userPrompt.startsWith(userMarkStart)) {
-            userPrompt = `${userMarkStart}${userPrompt}`;
+    
+        // Clean any existing marks from userPrompt
+        let cleanUserPrompt = this.cleanContent(userPrompt);
+    
+        // Check if the prompt starts with 'User:'
+        if (!cleanUserPrompt.startsWith('User:')) {
+            // Add 'User:' prefix with highlight
+            userPrompt = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> ${cleanUserPrompt}`;
+            selectedNode.setData({ text: userPrompt });
+        } else {
+            // Ensure the 'User:' prefix is highlighted correctly
+            const userContent = cleanUserPrompt.slice('User:'.length).trim();
+            userPrompt = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> ${userContent}`;
             selectedNode.setData({ text: userPrompt });
         }
-
+    
         // Handle connected nodes and context
         await this.processConnectedNodes(canvas, selectedNode, selectedNodes);
         await this.generateAssistantResponse(canvas, selectedNode, userPrompt, selectedNodes);
@@ -535,7 +695,7 @@ export default class CanvasChatPlugin extends Plugin {
     async processAssistantPlaceholder(node: any, canvas: any, selectedNodes: any[]) {
         const inboundEdges = this.getInboundEdges(node, canvas);
         const userInboundNodes = [];
-
+    
         for (const edge of inboundEdges) {
             const fromNode = edge.from.node;
             const fromNodeContent = await this.getNodeContent(fromNode);
@@ -543,28 +703,35 @@ export default class CanvasChatPlugin extends Plugin {
                 userInboundNodes.push(fromNode);
             }
         }
-
+    
         if (userInboundNodes.length === 1) {
             const userNode = userInboundNodes[0];
             let userNodeContent = await this.getNodeContent(userNode);
-
+    
             if (userNodeContent === null) {
                 new Notice("Error reading user's input in user node.");
                 throw new Error("Error reading user's input in user node.");
             }
-
+    
+            // Clean any existing marks from userNodeContent
+            let cleanUserNodeContent = this.cleanContent(userNodeContent);
+    
             // Add "User:" prefix with highlight if not present
-            const userMarkStart = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> `;
-            if (!userNodeContent.startsWith(userMarkStart)) {
-                userNodeContent = `${userMarkStart}${userNodeContent}`;
+            if (!cleanUserNodeContent.startsWith('User:')) {
+                userNodeContent = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> ${cleanUserNodeContent}`;
+                userNode.setData({ text: userNodeContent });
+            } else {
+                // Ensure the 'User:' prefix is highlighted correctly
+                const userContent = cleanUserNodeContent.slice('User:'.length).trim();
+                userNodeContent = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark> ${userContent}`;
                 userNode.setData({ text: userNodeContent });
             }
-
+    
             // Prepare messages and context
             const { conversationMessages, contextText } = await this.buildContextAndMessages(
                 canvas, userNode, selectedNodes, [node]
             );
-
+    
             // Construct prompt and messages
             const prompt = await this.constructPrompt(userNodeContent, contextText);
             const messages = [
@@ -572,23 +739,24 @@ export default class CanvasChatPlugin extends Plugin {
                 ...conversationMessages,
                 { role: 'user', content: prompt },
             ];
-
+    
             // Validate messages
             if (!this.isConversationAlternating(messages)) {
                 new Notice('Conversation history is not in alternating order of user and assistant messages.');
                 throw new Error('Conversation history is not in alternating order of user and assistant messages.');
             }
-
+    
             // Call vLLM API and update the assistant node
             try {
                 const response = await this.callVLLMAPI(messages);
-                const assistantMarkStart = `<mark style="background: ${this.settings.assistantHighlightColor};">Assistant:</mark> `;
-                let assistantResponse = response;
-                if (!node.text.startsWith(assistantMarkStart)) {
-                    assistantResponse = `${assistantMarkStart}${response}`;
-                }
+    
+                // Clean any existing marks from assistant response
+                let cleanResponse = this.cleanContent(response);
+    
+                // Add 'Assistant:' prefix with highlight
+                let assistantResponse = `<mark style="background: ${this.settings.assistantHighlightColor};">Assistant:</mark> ${cleanResponse}`;
                 node.setData({ text: assistantResponse });
-
+    
                 if (this.settings.debugMode) {
                     console.log('Updated assistant placeholder node with response:', node);
                 }
@@ -615,36 +783,35 @@ export default class CanvasChatPlugin extends Plugin {
     async buildContextAndMessages(canvas: any, startNode: any, excludeNodes: any[], additionalExcludeNodes: any[] = []) {
         const contextTextParts: string[] = [];
         const conversationMessages: any[] = [];
-
+    
         const excludeSet = new Set([...excludeNodes, ...additionalExcludeNodes]);
         const contextNodes = this.getInboundConnectedNodesBFS(canvas, startNode, excludeSet)
             .filter(n => n !== startNode)
             .reverse();
-
+    
         for (const node of contextNodes) {
             const content = await this.getNodeContent(node);
             if (content !== null) {
-                const userMark = `<mark style="background: ${this.settings.userHighlightColor};">User:</mark>`;
-                const assistantMark = `<mark style="background: ${this.settings.assistantHighlightColor};">Assistant:</mark>`;
-                if (content.startsWith(userMark)) {
-                    const cleanContent = this.cleanContent(content, 'User:');
-                    conversationMessages.push({ role: 'user', content: cleanContent });
-                } else if (content.startsWith(assistantMark)) {
-                    const cleanContent = this.cleanContent(content, 'Assistant:');
-                    conversationMessages.push({ role: 'assistant', content: cleanContent });
+                const cleanContent = this.cleanContent(content);
+    
+                if (cleanContent.startsWith('User:')) {
+                    const messageContent = cleanContent.slice('User:'.length).trim();
+                    conversationMessages.push({ role: 'user', content: messageContent });
+                } else if (cleanContent.startsWith('Assistant:')) {
+                    const messageContent = cleanContent.slice('Assistant:'.length).trim();
+                    conversationMessages.push({ role: 'assistant', content: messageContent });
                 } else {
-                    const cleanContent = this.cleanContent(content);
                     contextTextParts.push(cleanContent);
                 }
             }
         }
-
+    
         const contextText = contextTextParts.join('\n\n');
-
+    
         if (this.settings.debugMode) {
             console.log('Built context and messages:', { conversationMessages, contextText });
         }
-
+    
         return { conversationMessages, contextText };
     }
 
