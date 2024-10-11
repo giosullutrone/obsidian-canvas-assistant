@@ -551,10 +551,11 @@ export default class CanvasChatPlugin extends Plugin {
      * @returns The assistant's response.
      */
     async callVLLMAPI(messages: any[]): Promise<string> {
-        const apiUrl = `${this.settings.vllmApiUrl}/v1/chat/completions`;
+        const apiUrl = `${this.settings.vllmApiUrl}/api/chat`;
         const requestBody: any = {
             model: this.settings.model,
             messages: messages,
+            stream: false,
             options: {
                 num_ctx: this.settings.maxTokens,
                 num_predict: -1,
@@ -594,7 +595,7 @@ export default class CanvasChatPlugin extends Plugin {
             throw new Error(data.error.message);
         }
 
-        return data.choices[0].message.content;
+        return data.message.content;
     }
 
     /**
